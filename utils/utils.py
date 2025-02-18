@@ -1,8 +1,9 @@
 import re
+from openai import OpenAI
 
 def getCategoryOfInput(user_ip,api_key):
     client = OpenAI(api_key = api_key)
-
+    model_name = "gpt-4o"
     completion = client.chat.completions.create(
         model = model_name,
         messages = [
@@ -39,7 +40,7 @@ def getResponseFromLLM(user_ip,category,api_key):
 
     client = OpenAI(api_key = api_key)
     category = getCategoryOfInput(user_ip,api_key)
-
+    model_name = "gpt-4o"
     prompt_flowchart = """When you receive a question that needs a step-by-step answer, your task is to break it down into simpler, straightforward Yes/No questions. These questions should guide someone with little to no background knowledge through understanding and action. Here’s how you can do it effectively:
 
         Create Simple Yes/No Questions: Turn the main question into smaller questions that can be answered with a 'Yes' or a 'No'. Each question should be easy to understand, using basic language.
