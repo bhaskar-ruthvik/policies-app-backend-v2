@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from utils.utils import formatFlowchartType, formatParagraphType
+from utils import formatFlowchartType, formatParagraphType
 
 
 app = Flask(__name__)
