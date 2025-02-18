@@ -5,7 +5,7 @@ from utils.utils import formatFlowchartType, formatParagraphType, getCategoryOfI
 
 
 app = Flask(__name__)
-model_name = "gpt-4o"
+
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
