@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, request
 import os
 from dotenv import load_dotenv
-from utils.utils import formatFlowchartType, formatParagraphType, getCategoryOfInput, getResponseFromLLM
+from utils.utils import formatFlowchartType, formatParagraphType, getCategoryOfInput, getResponseFromLLM, retrieve_closest_document
+
 
 
 app = Flask(__name__)
@@ -15,6 +16,10 @@ api_key = os.getenv("OPENAI_API_KEY")
 def index():
     if request.method == "POST": 
         ip = request.form.get("body")
+        state = request.form.get("state")
+
+        if not state:
+            state = "Central Schemes"
         
         # Determine category of the input
         cat = getCategoryOfInput(ip,api_key)
@@ -24,7 +29,8 @@ def index():
         # context = "\n\n".join([doc.page_content for doc in retrieved_documents])
         
         # Generate the response with the retrieved context
-        content = getResponseFromLLM(ip, cat, api_key)
+        context = retrieve_closest_document(ip, state)
+        content = getResponseFromLLM(ip,context ,cat, api_key)
         
         if cat == "Informative Paragraph Question":
             headings, slugs = formatParagraphType(content)

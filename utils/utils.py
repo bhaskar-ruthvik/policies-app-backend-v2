@@ -1,5 +1,69 @@
 import re
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+import firebase_admin
+from firebase_admin import credentials, firestore
+import numpy as np
+from google.cloud.firestore_v1.base_query import FieldFilter, Or
+
+load_dotenv()
+
+key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key = key)
+cred = credentials.Certificate("serviceAccountKey.json")  # Update with your service key
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+def get_embedding(text):
+    return client.embeddings.create(
+        input = text,
+        model = "text-embedding-3-small"
+    ).data[0].embedding
+
+
+def cosine_similarity(vec1, vec2):
+    #see if theres a better method for this
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+def retrieve_closest_document(query,state):
+   
+    query_embedding = get_embedding(query)
+    closest_doc = None
+    max_similarity = -1
+
+    # Access Firestore collection
+    files_ref = db.collection("test-files").where(filter = Or(
+        [
+            FieldFilter("state", "==", state),
+            FieldFilter("state","==", "Central Schemes")      
+        ]
+        ))
+    the_files = files_ref.stream() #store all states
+    #print(states_docs)
+   
+
+    files = sorted([{"content": data.to_dict().get("text",""), "similarity": cosine_similarity(query_embedding,data.to_dict()["vector"])} for data in the_files], key = lambda data: data['similarity'],reverse = True)
+   
+    # for file_doc in the_files: #for each file in the file docs
+    #     #instead of going file by file find a way to retrieve by state using dictionary
+    #     data = file_doc.to_dict() 
+    #     # print('searching files')
+    #     if "vector" in data:
+    #         #doc_vector = data["vector"]
+    #         doc_vector = np.array(data["vector"], dtype=np.float32)
+    #         similarity = cosine_similarity(query_embedding, doc_vector)
+
+    #         print(f"New doc found with similarity: {similarity}")
+
+    #         if similarity > max_similarity:
+    #                 max_similarity = similarity
+    #                 closest_doc = {
+    #                     "content": data.get("text", ""),
+    #                     "state": data.get("state", "")                   
+    #                 }
+    
+    return files[:5] if (len(files) > 5) else files
 
 def getCategoryOfInput(user_ip,api_key):
     client = OpenAI(api_key = api_key)
@@ -36,7 +100,7 @@ def getCategoryOfInput(user_ip,api_key):
 
     return completion.choices[0].message.content
 
-def getResponseFromLLM(user_ip,category,api_key):
+def getResponseFromLLM(user_ip,context,category,api_key):
 
     client = OpenAI(api_key = api_key)
     category = getCategoryOfInput(user_ip,api_key)
@@ -57,7 +121,9 @@ def getResponseFromLLM(user_ip,category,api_key):
 
         If the question is asked in a language other than english, answer in that language.
         
-        This is the context, based on this information, answer the users question:"""
+        This is the context {context}
+        
+        Based on this information, answer the users question:"""
 
     prompt_yesno = """Your main task is to give a clear 'Yes' or 'No' answer to the question asked. After you answer, add a short paragraph explaining your answer in a simple way. Here’s how to do it:
 
@@ -73,7 +139,9 @@ def getResponseFromLLM(user_ip,category,api_key):
 
     If the question is asked in a language other than english, answer in that language. 
  
-    This is the context, based on this information, answer the users question:"""
+    This is the context: {context} 
+    
+    Based on this information, answer the users question:"""
     
     prompt_para = """Your job is to answer questions that need a bit more detail but keep your answers easy to understand. Follow these guidelines to help you:
 
@@ -89,7 +157,9 @@ def getResponseFromLLM(user_ip,category,api_key):
 
     If the question is asked in a language other than english, answer in that language. 
 
-    This is the context, based on this information, answer the users question:"""
+    This is the context: {context}
+    
+    Based on this information, answer the users question:"""
     
     if category == "Procedure-Based Question":
 
