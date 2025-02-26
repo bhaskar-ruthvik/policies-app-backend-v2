@@ -11,7 +11,19 @@ load_dotenv()
 
 key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key = key)
-cred = credentials.Certificate("serviceAccountKey.json")  # Update with your service key
+cred = credentials.Certificate(    {
+  "type": os.getenv("TYPE"),
+  "project_id": os.getenv("PROJECT_ID"),
+  "private_key_id": os.getenv("PRIVATE_KEY_ID"),
+  "private_key": os.getenv("PRIVATE_KEY"),
+  "client_email": os.getenv("CLIENT_EMAIL"),
+  "client_id": os.getenv("CLIENT_ID"),
+  "auth_uri": os.getenv("AUTH_URI"),
+  "token_uri": os.getenv("TOKEN_URI"),
+  "auth_provider_x509_cert_url": os.getenv("AUTH_PROVIDER_URL"),
+  "client_x509_cert_url": os.getenv("CLIENT_CERT_URL"),
+  "universe_domain":os.getenv("UNIVERSE_DOMAIN")
+})  # Update with your service key
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
