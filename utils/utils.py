@@ -6,11 +6,16 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import numpy as np
 from google.cloud.firestore_v1.base_query import FieldFilter, Or
+from langchain_openai import OpenAIEmbeddings
+import faiss
+from langchain_community.vectorstores import FAISS
+
 
 load_dotenv()
 
 key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key = key)
+embeddings = OpenAIEmbeddings(model ="text-embedding-3-small" ,api_key=key)
 cred = credentials.Certificate(    {
   "type": os.getenv("TYPE"),
   "project_id": os.getenv("PROJECT_ID"),
@@ -26,6 +31,8 @@ cred = credentials.Certificate(    {
 })  # Update with your service key
 firebase_admin.initialize_app(cred)
 db = firestore.client()
+DB_FAISS_PATH ='vectorstores/db_faiss'
+
 
 def get_embedding(text):
     return client.embeddings.create(
@@ -33,6 +40,10 @@ def get_embedding(text):
         model = "text-embedding-3-small"
     ).data[0].embedding
 
+def retrieve_closest_document_local(query,state):
+    vectorstore = FAISS.load_local(DB_FAISS_PATH,embeddings,allow_dangerous_deserialization = True)
+    res = vectorstore.similarity_search(query,k=5,filter={"state":{"$in": [state,"Central"]}})
+    return res
 
 def cosine_similarity(vec1, vec2):
     #see if theres a better method for this
@@ -75,7 +86,7 @@ def retrieve_closest_document(query,state):
     #                     "state": data.get("state", "")                   
     #                 }
     
-    return files[:5] if (len(files) > 5) else files
+    return [x["content"] for x in files][:5] if (len(files) > 5) else files
 
 def getCategoryOfInput(user_ip,api_key):
     client = OpenAI(api_key = api_key)
