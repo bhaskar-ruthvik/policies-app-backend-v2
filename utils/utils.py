@@ -90,7 +90,7 @@ def retrieve_closest_document(query,state):
 
 def getCategoryOfInput(user_ip,api_key):
     client = OpenAI(api_key = api_key)
-    model_name = "gpt-4o"
+    model_name = "gpt-4o-mini"
     completion = client.chat.completions.create(
         model = model_name,
         messages = [
