@@ -31,8 +31,8 @@ cred = credentials.Certificate(    {
 })  # Update with your service key
 firebase_admin.initialize_app(cred)
 db = firestore.client()
-DB_FAISS_PATH ='vectorstores/db_faiss'
-
+DB_POLICIES_PATH ='vectorstores/db_faiss'
+DB_LEGAL_PATH = 'vectorstores/db_faiss_legal'
 
 def get_embedding(text):
     return client.embeddings.create(
@@ -40,53 +40,16 @@ def get_embedding(text):
         model = "text-embedding-3-small"
     ).data[0].embedding
 
-def retrieve_closest_document_local(query,state):
-    vectorstore = FAISS.load_local(DB_FAISS_PATH,embeddings,allow_dangerous_deserialization = True)
+def retrieve_closest_document_policies(query,state):
+    vectorstore = FAISS.load_local(DB_POLICIES_PATH,embeddings,allow_dangerous_deserialization = True)
     res = vectorstore.similarity_search(query,k=5,filter={"state":{"$in": [state,"Central"]}})
     return res
 
-def cosine_similarity(vec1, vec2):
-    #see if theres a better method for this
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+def retrieve_closest_document_legal(query,state):
+    vectorstore = FAISS.load_local(DB_LEGAL_PATH,embeddings,allow_dangerous_deserialization = True)
+    res = vectorstore.similarity_search(query,k=5,filter={"state":{"$in": [state,"Central"]}})
+    return res
 
-def retrieve_closest_document(query,state):
-   
-    query_embedding = get_embedding(query)
-    closest_doc = None
-    max_similarity = -1
-
-    # Access Firestore collection
-    files_ref = db.collection("test-files").where(filter = Or(
-        [
-            FieldFilter("state", "==", state),
-            FieldFilter("state","==", "Central Schemes")      
-        ]
-        ))
-    the_files = files_ref.stream() #store all states
-    #print(states_docs)
-   
-
-    files = sorted([{"content": data.to_dict().get("text",""), "similarity": cosine_similarity(query_embedding,data.to_dict()["vector"])} for data in the_files], key = lambda data: data['similarity'],reverse = True)
-   
-    # for file_doc in the_files: #for each file in the file docs
-    #     #instead of going file by file find a way to retrieve by state using dictionary
-    #     data = file_doc.to_dict() 
-    #     # print('searching files')
-    #     if "vector" in data:
-    #         #doc_vector = data["vector"]
-    #         doc_vector = np.array(data["vector"], dtype=np.float32)
-    #         similarity = cosine_similarity(query_embedding, doc_vector)
-
-    #         print(f"New doc found with similarity: {similarity}")
-
-    #         if similarity > max_similarity:
-    #                 max_similarity = similarity
-    #                 closest_doc = {
-    #                     "content": data.get("text", ""),
-    #                     "state": data.get("state", "")                   
-    #                 }
-    
-    return [x["content"] for x in files][:5] if (len(files) > 5) else files
 
 def getCategoryOfInput(user_ip,api_key):
     client = OpenAI(api_key = api_key)
@@ -127,7 +90,7 @@ def getResponseFromLLM(user_ip,context,category,api_key):
 
     client = OpenAI(api_key = api_key)
     category = getCategoryOfInput(user_ip,api_key)
-    model_name = "gpt-4o"
+    model_name = "gpt-4o-mini"
     prompt_flowchart = """When you receive a question that needs a step-by-step answer, your task is to break it down into simpler, straightforward Yes/No questions. These questions should guide someone with little to no background knowledge through understanding and action. Here’s how you can do it effectively:
 
         Create Simple Yes/No Questions: Turn the main question into smaller questions that can be answered with a 'Yes' or a 'No'. Each question should be easy to understand, using basic language.

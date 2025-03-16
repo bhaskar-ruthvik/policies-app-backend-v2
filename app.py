@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 import os
 from dotenv import load_dotenv
-from utils.utils import formatFlowchartType, formatParagraphType, getCategoryOfInput, getResponseFromLLM, retrieve_closest_document_local
+from utils.utils import formatFlowchartType, formatParagraphType, getCategoryOfInput, getResponseFromLLM, retrieve_closest_document_policies, retrieve_closest_document_legal
 import time
 
 
@@ -18,6 +18,10 @@ def index():
         # curr = time.time()
         ip = request.form.get("body")
         state = request.form.get("state")
+        type_of_q = request.form.get("type")
+        if not type:
+            type_of_q = "Policies"
+        
         # end = time.time() 
         # print("Read arguments complete. Time taken: ", end-curr)
         # curr = time.time()
@@ -29,8 +33,10 @@ def index():
         # end = time.time()
         # print("Got Category of Input. Time Taken: ", end-curr)
         # curr = time.time()
-
-        retrieved_docs = retrieve_closest_document_local(ip, state)
+        if type_of_q == "Policies":
+            retrieved_docs = retrieve_closest_document_policies(ip, state)
+        else:
+            retrieved_docs = retrieve_closest_document_legal(ip,state)
         context=  "\n\n".join([doc.page_content for doc in retrieved_docs])
         # end = time.time()
         # print("Retrieved Relevant Documents. Time Taken:", end-curr)
